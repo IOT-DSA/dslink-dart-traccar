@@ -1,0 +1,24 @@
+{
+  "name" : "dslink-dart-traccar",
+  "version" : "1.0.0",
+  "description" : "Traccar Server DSLink",
+  "main" : "bin/run.dart",
+  "engines" : {
+    "dart" : ">1.11.0"
+  },
+  "getDependencies" : [
+    "pub get"
+  ],
+  "configs" : {
+    "broker" : {
+      "type" : "url"
+    },
+    "name" : {
+      "type" : "string",
+      "default" : "Traccar"
+    },
+    "token" : {
+      "type" : "string"
+    }
+  }
+}

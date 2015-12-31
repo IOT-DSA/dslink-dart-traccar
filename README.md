@@ -1,2 +1,3 @@
-# dslink-dart-traccar
-DSLink for Traccar Server
+# Traccar DSLink
+
+DSLink to interface with the Traccar Server API.
