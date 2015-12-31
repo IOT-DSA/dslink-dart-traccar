@@ -17,7 +17,7 @@ class TraccarClient {
   Uri _rootUri;
   List<Cookie> _cookies;
 
-  bool _authorized = false;
+  bool isAuthorized = false;
 
   factory TraccarClient(String server, String username, String password) =>
       _cache.putIfAbsent('$username@$server',
@@ -66,7 +66,7 @@ class TraccarClient {
     } else if (resp.statusCode == HttpStatus.OK) {
       ret['success'] = true;
       ret['message'] = 'Success';
-      _authorized = true;
+      isAuthorized = true;
     } else {
       ret['message'] = 'Unknown error';
     }
@@ -75,5 +75,29 @@ class TraccarClient {
 
   void close() {
     _client.close(force: true);
+  }
+
+  Future<List<Map>> get(String path) async {
+    String body;
+    HttpClientRequest req;
+    HttpClientResponse resp;
+
+    var url = _rootUri.replace(path: path);
+    try {
+      req = await _client.getUrl(url);
+      req.cookies.addAll(_cookies);
+      resp = await req.close();
+      body = await resp.transform(UTF8.decoder).join();
+    } on HttpException catch (e) {
+      logger.warning('Error getting url: $url', e);
+      return [];
+    }
+
+    try {
+      return JSON.decode(body);
+    } catch (e) {
+      logger.warning('Error decoding response: $body', e);
+      return [];
+    }
   }
 }

@@ -4,8 +4,11 @@ import 'dart:async';
 
 import 'package:dslink/responder.dart';
 import 'package:dslink/client.dart';
+import 'package:dslink/nodes.dart';
 
 import 'src/traccar_client.dart';
+
+part 'src/traccar_devices.dart';
 
 class AddConnection extends SimpleNode {
   static const String isType = 'addConnectionNode';
@@ -94,7 +97,7 @@ class TraccarNode extends SimpleNode {
   TraccarNode(String path) : super(path);
 
   @override
-  void onCreated() {
+  onCreated() async {
     var server = getConfig(r'$$tc_server');
     var user = getConfig(r'$$tc_user');
     var pass = getConfig(r'$$tc_pass');
@@ -102,6 +105,19 @@ class TraccarNode extends SimpleNode {
     client = new TraccarClient(server, user, pass);
 
     // TODO: Query devices
+    if (!client.isAuthorized) {
+      await client.authenticate();
+    }
+
+    var devices = await client.get(TraccarDevice.url);
+    if (devices.isEmpty) return;
+
+    var devicesNode = provider.getOrCreateNode('$path/devices');
+    var devNodePath = devicesNode.path;
+    for (var device in devices) {
+      var name = NodeNamer.createName(device['name']);
+      provider.addNode('$devNodePath/$name', TraccarDevice.definition(device));
+    }
   }
 
   @override
