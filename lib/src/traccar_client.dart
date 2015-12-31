@@ -72,4 +72,8 @@ class TraccarClient {
     }
     return ret;
   }
+
+  void close() {
+    _client.close(force: true);
+  }
 }

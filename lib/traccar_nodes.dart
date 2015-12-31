@@ -86,7 +86,8 @@ class TraccarNode extends SimpleNode {
     r'$is' : isType,
     r'$$tc_server' : params['address'],
     r'$$tc_user' : params['email'],
-    r'$$tc_pass' : params['password']
+    r'$$tc_pass' : params['password'],
+    RemoveConnection.pathName : RemoveConnection.definition()
   };
 
   TraccarClient client;
@@ -101,5 +102,32 @@ class TraccarNode extends SimpleNode {
     client = new TraccarClient(server, user, pass);
 
     // TODO: Query devices
+  }
+
+  @override
+  void onRemoving() {
+    client.close();
+  }
+}
+
+class RemoveConnection extends SimpleNode {
+  static const String isType = 'removeConnectionNode';
+  static const String pathName = 'Remove_Connection';
+  static Map<String, dynamic> definition() => {
+    r'$is' : isType,
+    r'$name' : 'Remove Connection',
+    r'$invokable' : 'write',
+    r'$params' : [],
+    r'$columns' : []
+  };
+
+  LinkProvider link;
+
+  RemoveConnection(String path, this.link) : super(path);
+
+  @override
+  onInvoke(Map params) {
+    provider.removeNode(parent.path);
+    link.save();
   }
 }
