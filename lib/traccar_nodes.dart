@@ -1,6 +1,7 @@
 library dslink.traccar.nodes;
 
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:dslink/responder.dart';
 import 'package:dslink/client.dart';
@@ -93,8 +94,14 @@ class TraccarNode extends SimpleNode {
     RemoveConnection.pathName : RemoveConnection.definition()
   };
 
-  TraccarClient client;
-  TraccarNode(String path) : super(path);
+  Future<TraccarClient> get client => _completer.future;
+  Completer<TraccarClient> _completer;
+  TraccarClient _client;
+  HashMap<int, String> deviceCache;
+
+  TraccarNode(String path) : super(path) {
+    _completer = new Completer<TraccarClient>();
+  }
 
   @override
   onCreated() async {
@@ -102,27 +109,29 @@ class TraccarNode extends SimpleNode {
     var user = getConfig(r'$$tc_user');
     var pass = getConfig(r'$$tc_pass');
 
-    client = new TraccarClient(server, user, pass);
+    _client = new TraccarClient(server, user, pass);
+    _completer.complete(_client);
 
-    // TODO: Query devices
-    if (!client.isAuthorized) {
-      await client.authenticate();
+    if (!_client.isAuthorized) {
+      await _client.authenticate();
     }
 
-    var devices = await client.get(TraccarDevice.url);
+    var devices = await _client.get(TraccarDevice.url);
     if (devices.isEmpty) return;
 
     var devicesNode = provider.getOrCreateNode('$path/devices');
     var devNodePath = devicesNode.path;
+    deviceCache = new HashMap<int, String>();
     for (var device in devices) {
       var name = NodeNamer.createName(device['name']);
+      deviceCache[device['id']] = name;
       provider.addNode('$devNodePath/$name', TraccarDevice.definition(device));
     }
   }
 
   @override
   void onRemoving() {
-    client.close();
+    _client.close();
   }
 }
 

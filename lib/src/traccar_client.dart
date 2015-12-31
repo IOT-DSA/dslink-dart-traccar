@@ -6,6 +6,8 @@ import 'dart:convert';
 
 import 'package:dslink/utils.dart' show logger;
 
+enum SubscriptionType { device, position }
+
 class TraccarClient {
   static const String _authUrl = 'api/session';
   static final Map<String, TraccarClient> _cache = <String, TraccarClient>{};
@@ -99,5 +101,9 @@ class TraccarClient {
       logger.warning('Error decoding response: $body', e);
       return [];
     }
+  }
+
+  Stream<Map<String, dynamic>> subscribe(SubscriptionType type, int id) {
+    // TODO: Complete
   }
 }

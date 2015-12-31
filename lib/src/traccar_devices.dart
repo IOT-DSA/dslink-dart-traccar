@@ -1,6 +1,24 @@
 part of dslink.traccar.nodes;
 
-class TraccarDevice extends SimpleNode {
+abstract class TraccarChild extends SimpleNode {
+  TraccarClient client;
+  SubscriptionType get subType;
+
+  TraccarChild(String path) : super(path) {
+    serializable = false;
+  }
+
+  @override
+  onCreated() async {
+    var tmp = parent;
+    while (tmp is! TraccarNode) {
+      tmp = parent.parent;
+    }
+    client = await (tmp as TraccarNode).client;
+  }
+}
+
+class TraccarDevice extends TraccarChild {
   static const String isType = 'traccarDeviceNode';
   static const String url = '/api/devices';
   static Map<String, dynamic> definition(Map data) {
@@ -39,7 +57,22 @@ class TraccarDevice extends SimpleNode {
     };
   }
 
+  final SubscriptionType subType = SubscriptionType.device;
+  int id;
+
   TraccarDevice(String path) : super(path) {
     this.serializable = false;
+  }
+
+  @override
+  onCreated() {
+    super.onCreated();
+
+    id = provider.getNode('$path/id').value;
+    client.subscribe(subType, id).listen(onSocketUpdate);
+  }
+
+  onSocketUpdate(Map<String, dynamic> data) {
+
   }
 }
