@@ -12,7 +12,7 @@ abstract class TraccarChild extends SimpleNode {
   onCreated() async {
     var tmp = parent;
     while (tmp is! TraccarNode) {
-      tmp = parent.parent;
+      tmp = tmp.parent;
     }
     client = await (tmp as TraccarNode).client;
   }
@@ -53,13 +53,15 @@ class TraccarDevice extends TraccarChild {
         r'$name' : 'Data Id',
         r'$type' : 'int',
         r'?value' : data['dataId']
-      }
+      },
+      'position' : TraccarPosition.definition()
     };
   }
 
   final SubscriptionType subType = SubscriptionType.device;
   int id;
   StreamSubscription _sub;
+  TraccarPosition _posNode;
 
   TraccarDevice(String path) : super(path) {
     this.serializable = false;
@@ -70,13 +72,120 @@ class TraccarDevice extends TraccarChild {
     await super.onCreated();
 
     id = provider.getNode('$path/id').value;
-    print('Device created: $id');
     if (_sub == null) {
+      var tmp = provider.getNode('$path/position');
+      if (tmp != null && tmp is TraccarPosition) {
+        _posNode = tmp;
+      }
       _sub = client.subscribe(subType, id).listen(onSocketUpdate);
     }
   }
 
-  onSocketUpdate(Map<String, dynamic> data) {
-    print('Received data: $data');
+  onSocketUpdate(TraccarUpdate update) {
+    var data = update.data;
+    if (update.type == SubscriptionType.device) {
+      var isOnline = data['status'] == 'online';
+      provider.setNode('$path/online', isOnline);
+      provider.setNode('$path/uniqueId', data['uniqueId']);
+      provider.setNode('$path/lastUpdate', data['lastUpdate']);
+      provider.setNode('$path/positionId', data['positionId']);
+    } else if (update.type == SubscriptionType.position) {
+      _posNode.update(update.data);
+    }
+  }
+}
+
+class TraccarPosition extends TraccarChild {
+  static const String isType = 'traccarPosition';
+  static Map<String, dynamic> definition() {
+    return {
+      r'$is' : isType,
+      'fixTime' : {
+        r'$name' : 'Fix Time',
+        r'$type' : 'string',
+        r'?value' : ''
+      },
+      'latitude' : {
+        r'$type' : 'number',
+        r'?value' : 0.0
+      },
+      'longitude' : {
+        r'$type' : 'number',
+        r'?value' : 0.0
+      },
+      'location' : {
+        r'$type' : 'map',
+        r'?value': { 'lat': 0.0, 'lng': 0.0},
+        r'@geo': true
+      },
+      'outdated' : {
+        r'$type' : 'bool',
+        r'?value': true
+      },
+      'valid' : {
+        r'$type' : 'bool',
+        r'?value' : true
+      },
+      'altitude' : {
+        r'$type' : 'number',
+        r'?value': 0.0
+      },
+      'speed' : {
+        r'$type' : 'number',
+        r'?value' : 0.0
+      },
+      'course' : {
+        r'$type' : 'number',
+        r'?value': 0.0
+      },
+      'address' : {
+        r'$type' : 'string',
+        r'?value': ''
+      },
+      'deviceTime' : {
+        r'$name' : 'Device Time',
+        r'$type' : 'string',
+        r'?value' : ''
+      },
+      'id' : {
+        r'$type' : 'int',
+        r'?value' : 0
+      },
+      'protocol' : {
+        r'$type' : 'string',
+        r'?value': ''
+      },
+      'attributes' : {
+        r'$type' : 'map',
+        r'?value': {}
+      },
+      'deviceId' : {
+        r'$name' : 'Device Id',
+        r'$type' : 'int',
+        r'?value' : 0
+      }
+    };
+  }
+
+  final SubscriptionType subType = SubscriptionType.position;
+
+  TraccarPosition(String path) : super(path);
+
+  void update(Map<String, dynamic> data) {
+    data.forEach((String key, dynamic value) {
+      if (data[key] != null && key != 'attributes') {
+        provider.updateValue('$path/$key', value);
+      }
+      if (data[key] != null && key == 'attributes') {
+        var curMap = provider.getNode('$path/attributes').value;
+        (curMap as Map).addAll(value);
+        provider.updateValue('$path/$key', curMap);
+      }
+    });
+
+    if (data['latitude'] != null && data['longitude'] != null) {
+      var loc = { 'lat': data['latitude'], 'lng': data['longitude']};
+      provider.updateValue('$path/location', loc);
+    }
   }
 }

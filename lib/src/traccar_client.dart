@@ -23,7 +23,7 @@ class TraccarClient {
   WebSocket _ws;
 
   bool isAuthorized = false;
-  HashMap<int, StreamController<Map>> subscriptions;
+  HashMap<int, StreamController<TraccarUpdate>> subscriptions;
 
   factory TraccarClient(String server, String username, String password) =>
       _cache.putIfAbsent('$username@$server',
@@ -113,7 +113,7 @@ class TraccarClient {
     };
     var wsUri = _rootUri.replace(scheme: 'ws', path: _wsUrl);
     if (subscriptions == null) {
-      subscriptions = new HashMap<int, StreamController<Map>>();
+      subscriptions = new HashMap<int, StreamController<TraccarUpdate>>();
       _ws = await WebSocket.connect(wsUri.toString(), headers: headers);
       _ws.listen(_websocketMessage);
     }
@@ -132,17 +132,32 @@ class TraccarClient {
         var devId = posInfo['deviceId'];
         print('devId: $devId - ${devId.runtimeType}');
         var subscription =
-            subscriptions.putIfAbsent(devId, () => new StreamController<Map>());
-        subscription.add(posInfo);
+            subscriptions.putIfAbsent(devId, () => new StreamController<TraccarUpdate>());
+        var update = new TraccarUpdate(SubscriptionType.position, posInfo);
+        subscription.add(update);
       }
+    } else if (msg.containsKey('devices')) {
+      for (var devInfo in msg['devices']) {
+        var devId = devInfo['id'];
+        var subscription =
+            subscriptions.putIfAbsent(devId, () => new StreamController<TraccarUpdate>());
+        var update = new TraccarUpdate(SubscriptionType.device, devInfo);
+        subscription.add(update);
+      }
+    } else {
+      logger.info('Websocket unknown message type: $msg');
     }
-
-    print(msg);
   }
 
-  Stream<Map<String, dynamic>> subscribe(SubscriptionType type, int id) {
+  Stream<TraccarUpdate> subscribe(SubscriptionType type, int id) {
     print('Subscribe: $id');
-    subscriptions.putIfAbsent(id, () => new StreamController<Map>());
+    subscriptions.putIfAbsent(id, () => new StreamController<TraccarUpdate>());
     return subscriptions[id].stream;
   }
+}
+
+class TraccarUpdate {
+  SubscriptionType type;
+  Map<String, dynamic> data;
+  TraccarUpdate(this.type, this.data);
 }
