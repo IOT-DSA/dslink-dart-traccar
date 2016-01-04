@@ -12,6 +12,7 @@ Future main(List<String> args) async {
     AddConnection.isType : (String path) => new AddConnection(path, link),
     RemoveConnection.isType : (String path) => new RemoveConnection(path, link),
     TraccarNode.isType : (String path) => new TraccarNode(path),
+    TraccarDevice.isType : (String path) => new TraccarDevice(path)
   });
 
   link.addNode('/${AddConnection.pathName}', AddConnection.definition());
