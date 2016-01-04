@@ -2,6 +2,7 @@ library dslink.traccar.client;
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:collection' show HashMap;
 import 'dart:convert';
 
 import 'package:dslink/utils.dart' show logger;
@@ -10,6 +11,7 @@ enum SubscriptionType { device, position }
 
 class TraccarClient {
   static const String _authUrl = 'api/session';
+  static const String _wsUrl = 'api/socket';
   static final Map<String, TraccarClient> _cache = <String, TraccarClient>{};
 
   HttpClient _client;
@@ -18,8 +20,10 @@ class TraccarClient {
   final String _password;
   Uri _rootUri;
   List<Cookie> _cookies;
+  WebSocket _ws;
 
   bool isAuthorized = false;
+  HashMap<int, StreamController<Map>> subscriptions;
 
   factory TraccarClient(String server, String username, String password) =>
       _cache.putIfAbsent('$username@$server',
@@ -103,7 +107,42 @@ class TraccarClient {
     }
   }
 
+  Future connectWebSocket() async {
+    var headers = {
+      'Cookie' : _cookies.map((c) => c.toString()).join('; ')
+    };
+    var wsUri = _rootUri.replace(scheme: 'ws', path: _wsUrl);
+    if (subscriptions == null) {
+      subscriptions = new HashMap<int, StreamController<Map>>();
+      _ws = await WebSocket.connect(wsUri.toString(), headers: headers);
+      _ws.listen(_websocketMessage);
+    }
+  }
+
+  void _websocketMessage(dynamic message) {
+    var msg = {};
+    try {
+      msg = JSON.decode(message);
+    } catch (e) {
+      logger.warning('Websocket Error: Unable to decode message: $message', e);
+      return;
+    }
+    if (msg.containsKey('positions')) {
+      for (var posInfo in msg['positions']) {
+        var devId = posInfo['deviceId'];
+        print('devId: $devId - ${devId.runtimeType}');
+        var subscription =
+            subscriptions.putIfAbsent(devId, () => new StreamController<Map>());
+        subscription.add(posInfo);
+      }
+    }
+
+    print(msg);
+  }
+
   Stream<Map<String, dynamic>> subscribe(SubscriptionType type, int id) {
-    // TODO: Complete
+    print('Subscribe: $id');
+    subscriptions.putIfAbsent(id, () => new StreamController<Map>());
+    return subscriptions[id].stream;
   }
 }

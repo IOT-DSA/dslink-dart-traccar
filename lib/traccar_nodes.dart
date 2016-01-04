@@ -127,6 +127,7 @@ class TraccarNode extends SimpleNode {
       deviceCache[device['id']] = name;
       provider.addNode('$devNodePath/$name', TraccarDevice.definition(device));
     }
+    await _client.connectWebSocket();
   }
 
   @override

@@ -59,20 +59,24 @@ class TraccarDevice extends TraccarChild {
 
   final SubscriptionType subType = SubscriptionType.device;
   int id;
+  StreamSubscription _sub;
 
   TraccarDevice(String path) : super(path) {
     this.serializable = false;
   }
 
   @override
-  onCreated() {
-    super.onCreated();
+  onCreated() async {
+    await super.onCreated();
 
     id = provider.getNode('$path/id').value;
-    client.subscribe(subType, id).listen(onSocketUpdate);
+    print('Device created: $id');
+    if (_sub == null) {
+      _sub = client.subscribe(subType, id).listen(onSocketUpdate);
+    }
   }
 
   onSocketUpdate(Map<String, dynamic> data) {
-
+    print('Received data: $data');
   }
 }
