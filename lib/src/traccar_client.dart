@@ -41,7 +41,6 @@ class TraccarClient {
     HttpClientResponse resp;
     String body;
 
-    print(authUri);
     try {
       req = await _client.postUrl(authUri);
       req.headers.contentType = new ContentType('application', 'x-www-form-urlencoded', charset: 'UTF-8');
@@ -130,7 +129,6 @@ class TraccarClient {
     if (msg.containsKey('positions')) {
       for (var posInfo in msg['positions']) {
         var devId = posInfo['deviceId'];
-        print('devId: $devId - ${devId.runtimeType}');
         var subscription =
             subscriptions.putIfAbsent(devId, () => new StreamController<TraccarUpdate>());
         var update = new TraccarUpdate(SubscriptionType.position, posInfo);
@@ -150,7 +148,6 @@ class TraccarClient {
   }
 
   Stream<TraccarUpdate> subscribe(SubscriptionType type, int id) {
-    print('Subscribe: $id');
     subscriptions.putIfAbsent(id, () => new StreamController<TraccarUpdate>());
     return subscriptions[id].stream;
   }

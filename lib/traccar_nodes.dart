@@ -37,7 +37,8 @@ class AddConnection extends SimpleNode {
       },
       {
         'name' : 'password',
-        'type' : 'password'
+        'type' : 'string',
+        'editor': 'password'
       }
     ],
     r'$columns' : [

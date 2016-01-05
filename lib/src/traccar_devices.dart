@@ -85,10 +85,10 @@ class TraccarDevice extends TraccarChild {
     var data = update.data;
     if (update.type == SubscriptionType.device) {
       var isOnline = data['status'] == 'online';
-      provider.setNode('$path/online', isOnline);
-      provider.setNode('$path/uniqueId', data['uniqueId']);
-      provider.setNode('$path/lastUpdate', data['lastUpdate']);
-      provider.setNode('$path/positionId', data['positionId']);
+      provider.updateValue('$path/online', isOnline);
+      provider.updateValue('$path/uniqueId', data['uniqueId']);
+      provider.updateValue('$path/lastUpdate', data['lastUpdate']);
+      provider.updateValue('$path/positionId', data['positionId']);
     } else if (update.type == SubscriptionType.position) {
       _posNode.update(update.data);
     }
