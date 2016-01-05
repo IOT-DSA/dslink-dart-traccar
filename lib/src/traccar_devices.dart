@@ -177,9 +177,12 @@ class TraccarPosition extends TraccarChild {
         provider.updateValue('$path/$key', value);
       }
       if (data[key] != null && key == 'attributes') {
-        var curMap = provider.getNode('$path/attributes').value;
-        (curMap as Map).addAll(value);
-        provider.updateValue('$path/$key', curMap);
+        var attr = data['attributes'] as Map;
+        attr.forEach((atKey, atVal) {
+          var nd = provider.getOrCreateNode('$path/$atKey');
+          nd.configs[r'$type'] = 'string';
+          nd.updateValue(atVal);
+        });
       }
     });
 

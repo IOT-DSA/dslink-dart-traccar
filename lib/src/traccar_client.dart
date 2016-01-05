@@ -114,7 +114,9 @@ class TraccarClient {
     if (subscriptions == null) {
       subscriptions = new HashMap<int, StreamController<TraccarUpdate>>();
       _ws = await WebSocket.connect(wsUri.toString(), headers: headers);
-      _ws.listen(_websocketMessage);
+      _ws.listen(_websocketMessage, cancelOnError: false, onError: (e) {
+        logger.warning('Websocket error: $e');
+      });
     }
   }
 
