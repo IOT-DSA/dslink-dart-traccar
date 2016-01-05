@@ -54,7 +54,8 @@ class TraccarDevice extends TraccarChild {
         r'$type' : 'int',
         r'?value' : data['dataId']
       },
-      'position' : TraccarPosition.definition()
+      'position' : TraccarPosition.definition(),
+      TraccarReport.pathName : TraccarReport.definition(data['id'])
     };
   }
 
@@ -186,5 +187,100 @@ class TraccarPosition extends TraccarChild {
       var loc = { 'lat': data['latitude'], 'lng': data['longitude']};
       provider.updateValue('$path/location', loc);
     }
+  }
+}
+
+class TraccarReport extends TraccarChild {
+  static const String url = 'api/positions';
+  static const String isType = 'traccarReportNode';
+  static const String pathName = 'Traccar_Report';
+  static Map<String, dynamic> definition(int id) => {
+    r'$is' : isType,
+    r'$$dev_id' : id,
+    r'$name' : 'Get History',
+    r'$invokable' : 'write',
+    r'$result' : 'table',
+    r'$params' : [
+      {
+        'name' : 'dateRange',
+        'type' : 'string',
+        'editor' : 'daterange'
+      }
+    ],
+    r'$columns' : [
+      {
+        'name' : 'address',
+        'type' : 'string'
+      },
+      {
+        'name' : 'altitude',
+        'type': 'num'
+      },
+      {
+        'name' : 'attributes',
+        'type' : 'map'
+      },
+      {
+        'name' : 'course',
+        'type' : 'num'
+      },
+      {
+        'name' : 'deviceTime',
+        'type' : 'num'
+      },
+      {
+        'name': 'latitude',
+        'type' : 'num'
+      },
+      {
+        'name' : 'longitude',
+        'type' : 'num'
+      },
+      {
+        'name' : 'speed',
+        'type' : 'num'
+      },
+      {
+        'name' : 'valid',
+        'type' : 'bool'
+      }
+    ]
+  };
+
+  SubscriptionType subType = SubscriptionType.device;
+
+  TraccarReport(String path) : super(path);
+
+  @override
+  Future onInvoke(Map<String, dynamic> params) async {
+    if (params['dateRange'] == null || params['dateRange'].isEmpty) {
+      return null;
+    }
+
+    var id = getConfig(r'$$dev_id');
+    var dates = params['dateRange'].split('/');
+    var queryParams = {
+      'deviceId' : '$id',
+      'from' : '${dates[0]}Z',
+      'to' : '${dates[1]}Z'
+    };
+
+    var results = await client.get(url, queryParameters: queryParams);
+    var r = [];
+    for (Map res in results) {
+      var row = [
+        res['address'],
+        res['altitude'],
+        res['attributes'],
+        res['course'],
+        res['deviceTime'],
+        res['latitude'],
+        res['longitude'],
+        res['speed'],
+        res['valid']
+      ];
+      r.add(row);
+    }
+    return r;
   }
 }

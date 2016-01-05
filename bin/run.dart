@@ -13,6 +13,7 @@ Future main(List<String> args) async {
     RemoveConnection.isType : (String path) => new RemoveConnection(path, link),
     TraccarNode.isType : (String path) => new TraccarNode(path),
     TraccarPosition.isType : (String path) => new TraccarPosition(path),
+    TraccarReport.isType : (String path) => new TraccarReport(path),
     TraccarDevice.isType : (String path) => new TraccarDevice(path)
   }, autoInitialize: false);
 

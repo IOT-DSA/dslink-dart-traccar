@@ -85,12 +85,13 @@ class TraccarClient {
     _client.close(force: true);
   }
 
-  Future<List<Map>> get(String path) async {
+  Future<List<Map>> get(String path, {Map queryParameters}) async {
     String body;
     HttpClientRequest req;
     HttpClientResponse resp;
 
-    var url = _rootUri.replace(path: path);
+    var url = _rootUri.replace(path: path, queryParameters: queryParameters);
+    logger.finest('GET request for: $url');
     try {
       req = await _client.getUrl(url);
       req.cookies.addAll(_cookies);
