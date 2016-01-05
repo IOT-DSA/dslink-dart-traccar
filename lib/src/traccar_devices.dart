@@ -155,10 +155,6 @@ class TraccarPosition extends TraccarChild {
         r'$type' : 'string',
         r'?value': ''
       },
-      'attributes' : {
-        r'$type' : 'map',
-        r'?value': {}
-      },
       'deviceId' : {
         r'$name' : 'Device Id',
         r'$type' : 'int',
