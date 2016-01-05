@@ -21,7 +21,6 @@ class TraccarClient {
   Uri _rootUri;
   List<Cookie> _cookies;
   WebSocket _ws;
-  Timer _wsPing;
 
   bool isAuthorized = false;
   HashMap<int, StreamController<TraccarUpdate>> subscriptions;
@@ -121,6 +120,7 @@ class TraccarClient {
     if (_ws == null || _ws.closeCode != null) {
       try {
         _ws = await WebSocket.connect(wsUri.toString(), headers: headers);
+        _ws.pingInterval = new Duration(seconds: 30);
       } catch (e) {
         logger.warning('Error connecting websocket: $e');
         new Future.delayed(new Duration(seconds: 30), () {
@@ -128,9 +128,6 @@ class TraccarClient {
         });
         return;
       }
-      _wsPing = new Timer.periodic(new Duration(seconds: 30), (t) {
-        _ws.add('ping');
-      });
       _ws.listen(_websocketMessage, cancelOnError: false, onError: (e) {
         logger.warning('Websocket error: $e');
       }, onDone: () {
