@@ -21,6 +21,7 @@ class TraccarClient {
   Uri _rootUri;
   List<Cookie> _cookies;
   WebSocket _ws;
+  Timer _wsPing;
 
   bool isAuthorized = false;
   HashMap<int, StreamController<TraccarUpdate>> subscriptions;
@@ -55,6 +56,9 @@ class TraccarClient {
     } on HttpException catch (e) {
       logger.warning('Unable to connect to $authUri', e);
       return { 'success': false, 'message' : 'Error connecting to server' };
+    } on SocketException catch (e) {
+      logger.warning('Unable to connect to $authUri', e);
+      return new Future.delayed(new Duration(seconds: 30), () => authenticate());
     }
 
     Map bodyMap;
@@ -113,15 +117,33 @@ class TraccarClient {
     var wsUri = _rootUri.replace(scheme: 'ws', path: _wsUrl);
     if (subscriptions == null) {
       subscriptions = new HashMap<int, StreamController<TraccarUpdate>>();
-      _ws = await WebSocket.connect(wsUri.toString(), headers: headers);
+    }
+    if (_ws == null || _ws.closeCode != null) {
+      try {
+        _ws = await WebSocket.connect(wsUri.toString(), headers: headers);
+      } catch (e) {
+        logger.warning('Error connecting websocket: $e');
+        new Future.delayed(new Duration(seconds: 30), () {
+          connectWebSocket();
+        });
+        return;
+      }
+      _wsPing = new Timer.periodic(new Duration(seconds: 30), (t) {
+        print('Pinging Websocket');
+        _ws.add('ping');
+      });
       _ws.listen(_websocketMessage, cancelOnError: false, onError: (e) {
         logger.warning('Websocket error: $e');
+      }, onDone: () {
+        logger.finest('Websocket Close: ${_ws.closeCode} - ${_ws.closeReason}');
+        connectWebSocket();
       });
     }
   }
 
   void _websocketMessage(dynamic message) {
     var msg = {};
+    logger.finest('Websocket received: $message');
     try {
       msg = JSON.decode(message);
     } catch (e) {
