@@ -129,7 +129,6 @@ class TraccarClient {
         return;
       }
       _wsPing = new Timer.periodic(new Duration(seconds: 30), (t) {
-        print('Pinging Websocket');
         _ws.add('ping');
       });
       _ws.listen(_websocketMessage, cancelOnError: false, onError: (e) {
