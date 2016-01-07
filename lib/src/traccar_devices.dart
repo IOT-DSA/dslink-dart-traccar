@@ -171,7 +171,12 @@ class TraccarPosition extends TraccarChild {
   void update(Map<String, dynamic> data) {
     data.forEach((String key, dynamic value) {
       if (data[key] != null && key != 'attributes') {
-        provider.updateValue('$path/$key', value);
+        var nd = provider.getNode('$path/$key');
+        if (nd == null) {
+          nd = provider.getOrCreateNode('$path/$key');
+          nd.configs[r'$type'] = 'string';
+        }
+        nd.updateValue(value);
       }
       if (data[key] != null && key == 'attributes') {
         var attr = data['attributes'] as Map;

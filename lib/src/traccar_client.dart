@@ -122,6 +122,13 @@ class TraccarClient {
       try {
         _ws = await WebSocket.connect(wsUri.toString(), headers: headers);
         _ws.pingInterval = new Duration(seconds: 30);
+      } on WebSocketException catch (e) {
+        logger.warning('Error connecting Websocket: $e');
+        logger.finest('Trying to re-authenticate');
+        authenticate().then((_) {
+          connectWebSocket();
+        });
+        return;
       } catch (e) {
         logger.warning('Error connecting websocket: $e');
         new Future.delayed(new Duration(seconds: 30), () {
