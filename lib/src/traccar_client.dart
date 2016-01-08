@@ -21,9 +21,12 @@ class TraccarClient {
   Uri _rootUri;
   List<Cookie> _cookies;
   WebSocket _ws;
+  StreamController<Map<String, dynamic>> _newDevices;
+  Set<int> _pendingDevices;
 
   bool isAuthorized = false;
   HashMap<int, StreamController<TraccarUpdate>> subscriptions;
+  Stream<Map<String, dynamic>> get onNewDevice => _newDevices.stream;
 
   factory TraccarClient(String server, String username, String password) =>
       _cache.putIfAbsent('$username@$server',
@@ -32,6 +35,8 @@ class TraccarClient {
   TraccarClient._(String server, this._username, this._password) {
     _rootUri = Uri.parse(server);
     _client = new HttpClient();
+    _newDevices = new StreamController<Map<String, dynamic>>();
+    _pendingDevices = new Set<int>();
   }
 
   Future<Map<String, dynamic>> authenticate() async {
@@ -121,7 +126,6 @@ class TraccarClient {
     if (_ws == null || _ws.closeCode != null) {
       try {
         _ws = await WebSocket.connect(wsUri.toString(), headers: headers);
-        _ws.pingInterval = new Duration(seconds: 30);
       } on WebSocketException catch (e) {
         logger.warning('Error connecting Websocket: $e');
         logger.finest('Trying to re-authenticate');
@@ -157,6 +161,9 @@ class TraccarClient {
     if (msg.containsKey('positions')) {
       for (var posInfo in msg['positions']) {
         var devId = posInfo['deviceId'];
+        if (!subscriptions.containsKey(devId)) {
+          _pendingDevices.add(devId);
+        }
         var subscription =
             subscriptions.putIfAbsent(devId, () => new StreamController<TraccarUpdate>());
         var update = new TraccarUpdate(SubscriptionType.position, posInfo);
@@ -164,11 +171,19 @@ class TraccarClient {
       }
     } else if (msg.containsKey('devices')) {
       for (var devInfo in msg['devices']) {
+        bool newDev = false;
         var devId = devInfo['id'];
+        if (!subscriptions.containsKey(devId) || _pendingDevices.contains(devId)) {
+          newDev = true;
+        }
         var subscription =
             subscriptions.putIfAbsent(devId, () => new StreamController<TraccarUpdate>());
         var update = new TraccarUpdate(SubscriptionType.device, devInfo);
-        subscription.add(update);
+        if (newDev) {
+          _newDevices.add(devInfo);
+          _pendingDevices.remove(devId);
+        }
+          subscription.add(update);
       }
     } else {
       logger.info('Websocket unknown message type: $msg');

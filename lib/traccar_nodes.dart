@@ -98,10 +98,11 @@ class TraccarNode extends SimpleNode {
   Future<TraccarClient> get client => _completer.future;
   Completer<TraccarClient> _completer;
   TraccarClient _client;
-  HashMap<int, String> deviceCache;
+  Set<int> deviceIds;
 
   TraccarNode(String path) : super(path) {
     _completer = new Completer<TraccarClient>();
+    deviceIds = new Set<int>();
   }
 
   @override
@@ -120,20 +121,27 @@ class TraccarNode extends SimpleNode {
     var devices = await _client.get(TraccarDevice.url);
     if (devices.isEmpty) return;
 
-    var devicesNode = provider.getOrCreateNode('$path/devices');
-    var devNodePath = devicesNode.path;
-    deviceCache = new HashMap<int, String>();
     for (var device in devices) {
-      var name = NodeNamer.createName(device['name']);
-      deviceCache[device['id']] = name;
-      provider.addNode('$devNodePath/$name', TraccarDevice.definition(device));
+      _addDevice(device);
     }
+    _client.onNewDevice.listen(_addDevice);
     await _client.connectWebSocket();
   }
 
   @override
   void onRemoving() {
     _client.close();
+  }
+
+  void _addDevice(Map<String, dynamic> device) {
+    if (deviceIds.contains(device['id'])) return;
+    deviceIds.add(device['id']);
+    print('Adding Device: $device');
+    var devicesNode = provider.getOrCreateNode('$path/devices');
+    var devNodePath = devicesNode.path;
+    var name = NodeNamer.createName(device['name']);
+    provider.addNode('$devNodePath/$name', TraccarDevice.definition(device));
+
   }
 }
 
