@@ -136,7 +136,6 @@ class TraccarNode extends SimpleNode {
   void _addDevice(Map<String, dynamic> device) {
     if (deviceIds.contains(device['id'])) return;
     deviceIds.add(device['id']);
-    print('Adding Device: $device');
     var devicesNode = provider.getOrCreateNode('$path/devices');
     var devNodePath = devicesNode.path;
     var name = NodeNamer.createName(device['name']);
