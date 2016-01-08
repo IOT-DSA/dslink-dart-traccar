@@ -58,10 +58,12 @@ class TraccarClient {
       logger.info('Response Status: ${resp.statusCode}');
       logger.info('Response Body: $body');
     } on HttpException catch (e) {
-      logger.warning('Unable to connect to $authUri', e);
+      var tmpUrl = authUri.replace(queryParameters: null);
+      logger.warning('Unable to connect to $tmpUrl', e);
       return { 'success': false, 'message' : 'Error connecting to server' };
     } on SocketException catch (e) {
-      logger.warning('Unable to connect to $authUri', e);
+      var tmpUrl = authUri.replace(queryParameters: null);
+      logger.warning('Unable to connect to $tmpUrl', e);
       return new Future.delayed(new Duration(seconds: 30), () => authenticate());
     }
 
