@@ -121,7 +121,12 @@ class TraccarClient {
     var headers = {
       'Cookie' : _cookies.map((c) => c.toString()).join('; ')
     };
-    var wsUri = _rootUri.replace(scheme: 'ws', path: _wsUrl);
+    Uri wsUri;
+    if (_rootUri.scheme == 'https') {
+      wsUri = _rootUri.replace(scheme: 'wss', path: _wsUrl);
+    } else {
+      wsUri = _rootUri.replace(scheme: 'ws', path: _wsUrl);
+    }
     if (subscriptions == null) {
       subscriptions = new HashMap<int, StreamController<TraccarUpdate>>();
     }
