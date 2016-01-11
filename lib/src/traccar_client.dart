@@ -171,7 +171,7 @@ class TraccarClient {
     if (_ws != null && _ws.closeCode == null) {
       await _ws.close();
     }
-    connectWebSocket();
+    return connectWebSocket();
   }
 
   void _websocketMessage(dynamic message) {

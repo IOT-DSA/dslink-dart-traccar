@@ -92,7 +92,8 @@ class TraccarNode extends SimpleNode {
     r'$$tc_server' : params['address'],
     r'$$tc_user' : params['email'],
     r'$$tc_pass' : params['password'],
-    RemoveConnection.pathName : RemoveConnection.definition()
+    RemoveConnection.pathName : RemoveConnection.definition(),
+    RefreshConnection.pathName : RefreshConnection.definition()
   };
 
   Future<TraccarClient> get client => _completer.future;
@@ -110,6 +111,12 @@ class TraccarNode extends SimpleNode {
     var server = getConfig(r'$$tc_server');
     var user = getConfig(r'$$tc_user');
     var pass = getConfig(r'$$tc_pass');
+
+    var refNode = provider.getNode('$path/${RefreshConnection.pathName}');
+    if (refNode == null) {
+      provider.addNode('$path/${RefreshConnection.pathName}',
+          RefreshConnection.definition());
+    }
 
     _client = new TraccarClient(server, user, pass);
     _completer.complete(_client);
@@ -163,5 +170,40 @@ class RemoveConnection extends SimpleNode {
   onInvoke(Map params) {
     provider.removeNode(parent.path);
     link.save();
+  }
+}
+
+class RefreshConnection extends SimpleNode {
+  static const String isType = 'refreshConnectionNode';
+  static const String pathName = 'Refresh_Connection';
+  static Map<String, dynamic> definition() => {
+    r'$is' : isType,
+    r'$name' : 'Refresh Connection',
+    r'$invokable' : 'write',
+    r'$params' : [],
+    r'$columns' : [
+      {
+        'name' : 'success',
+        'type' : 'bool',
+        'default' : false
+      },
+      {
+        'name' : 'message',
+        'type' : 'string',
+        'default' : ''
+      }
+    ]
+  };
+
+  RefreshConnection(String path) : super(path);
+
+  @override
+  Future<Map<String, dynamic>> onInvoke(Map params) async {
+    var client = await (parent as TraccarNode).client;
+    await client.resetWebsocket();
+    return {
+      'success' : true,
+      'message' : 'Refreshed!'
+    };
   }
 }

@@ -11,6 +11,7 @@ Future main(List<String> args) async {
   link = new LinkProvider(args, 'Traccar-', command: 'run', profiles: {
     AddConnection.isType : (String path) => new AddConnection(path, link),
     RemoveConnection.isType : (String path) => new RemoveConnection(path, link),
+    RefreshConnection.isType : (String path) => new RefreshConnection(path),
     TraccarNode.isType : (String path) => new TraccarNode(path),
     TraccarPosition.isType : (String path) => new TraccarPosition(path),
     TraccarReport.isType : (String path) => new TraccarReport(path),
