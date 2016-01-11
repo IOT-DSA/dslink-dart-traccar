@@ -23,6 +23,7 @@ class TraccarClient {
   WebSocket _ws;
   StreamController<Map<String, dynamic>> _newDevices;
   Set<int> _pendingDevices;
+  Timer _resetSocket;
 
   bool isAuthorized = false;
   HashMap<int, StreamController<TraccarUpdate>> subscriptions;
@@ -151,9 +152,26 @@ class TraccarClient {
         logger.warning('Websocket error: $e');
       }, onDone: () {
         logger.finest('Websocket Close: ${_ws.closeCode} - ${_ws.closeReason}');
-        connectWebSocket();
+        resetWebsocket();
       });
+
+      if (_resetSocket == null || !_resetSocket.isActive) {
+        _resetSocket = new Timer.periodic(new Duration(hours: 1), (_) async {
+          await _ws.close();
+          connectWebSocket();
+        });
+      }
     }
+  }
+
+  Future resetWebsocket() async {
+    if (_resetSocket != null && _resetSocket.isActive) {
+      _resetSocket.cancel();
+    }
+    if (_ws != null && _ws.closeCode == null) {
+      await _ws.close();
+    }
+    connectWebSocket();
   }
 
   void _websocketMessage(dynamic message) {
