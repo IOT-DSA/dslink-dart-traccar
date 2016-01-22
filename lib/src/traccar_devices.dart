@@ -289,3 +289,44 @@ class TraccarReport extends TraccarChild {
     return r;
   }
 }
+
+class EditDevice extends SimpleNode {
+  static const String isType = 'editDeviceNode';
+  static const String pathName = 'Edit_Device';
+  static Map<String, dynamic> definition(String name, String identifier) => {
+    r'$is' : isType,
+    r'$name' : 'Edit Device',
+    r'$invokable' : 'write',
+    r'$params' : [
+      {
+        'name' : 'name',
+        'type' : 'string',
+        'default' : name
+      },
+      {
+        'name' : 'identifier',
+        'type' : 'string',
+        'default' : identifier
+      }
+    ],
+    r'$columns' : [
+      {
+        'name' : 'success',
+        'type' : 'bool',
+        'default' : false
+      },
+      {
+        'name' : 'message',
+        'type' : 'string',
+        'default': ''
+      }
+    ]
+  };
+  
+  EditDevice(String path) : super(path);
+  
+  @override
+  Map<String, dynamic> onInvoke(Map<String, dynamic> params) {
+
+  }
+}
