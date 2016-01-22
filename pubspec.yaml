@@ -1,4 +1,4 @@
 name: dslink_traccar
 description: Traccar Server DSLink
 dependencies:
-  dslink: ^0.5.1
+  dslink: ^0.5.3
