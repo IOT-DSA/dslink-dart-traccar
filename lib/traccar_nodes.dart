@@ -93,7 +93,8 @@ class TraccarNode extends SimpleNode {
     r'$$tc_user' : params['email'],
     r'$$tc_pass' : params['password'],
     RemoveConnection.pathName : RemoveConnection.definition(),
-    RefreshConnection.pathName : RefreshConnection.definition()
+    RefreshConnection.pathName : RefreshConnection.definition(),
+    AddDevice.pathName : AddDevice.definition()
   };
 
   Future<TraccarClient> get client => _completer.future;
@@ -205,5 +206,69 @@ class RefreshConnection extends SimpleNode {
       'success' : true,
       'message' : 'Refreshed!'
     };
+  }
+}
+
+class AddDevice extends SimpleNode {
+  static const String isType = 'addDeviceNode';
+  static const String pathName = 'Add_Device';
+  static Map<String, dynamic> definition() => {
+    r'$is' : isType,
+    r'$name' : 'Add Device',
+    r'$invokable' : 'write',
+    r'$params' : [
+      {
+        'name' : 'name',
+        'type' : 'string',
+        'placeholder' : 'Name'
+      },
+      {
+        'name' : 'identifier',
+        'type' : 'string',
+        'placeholder' : 'identifier'
+      }
+    ],
+    r'$columns' : [
+      {
+        'name' : 'success',
+        'type' : 'bool',
+        'default' : false
+      },
+      {
+        'name' : 'message',
+        'type' : 'string',
+        'default': ''
+      }
+    ]
+  };
+  
+  AddDevice(String path) : super(path);
+  
+  @override
+  Future<Map<String, dynamic>> onInvoke(Map<String, dynamic> params) async {
+    var ret = { 'success': false, 'message': '' };
+    if (params['name'] == null || params['name'].isEmpty ||
+        params['identifier'] == null || params['identifier'].isEmpty) {
+      ret['message'] = 'Name and Identifier are required';
+      return ret;
+    }
+
+    var data = {
+      'id' : -1,
+      'name' : params['name'].trim(),
+      'uniqueId' : params['identifier'].trim(),
+      'status' : '',
+      'lastUpdate': null
+    };
+
+    var client = await (parent as TraccarNode).client;
+    var res = await client.post(TraccarDevice.url, data);
+    if  (res != null) {
+      ret['success'] = true;
+      ret['message'] = 'Success';
+    } else {
+      ret['message'] = 'Failed to add device.';
+    }
+    return ret;
   }
 }

@@ -118,6 +118,40 @@ class TraccarClient {
     }
   }
 
+  Future<Map> post(String path, Map data) async {
+    String body;
+    HttpClientRequest req;
+    HttpClientResponse resp;
+    String dataStr = JSON.encode(data);
+
+    var url = _rootUri.replace(path: path);
+    logger.finest('POST request for: $url');
+    try {
+      req = await _client.postUrl(url);
+      req.headers.contentType = ContentType.JSON;
+      req.cookies.addAll(_cookies);
+      req.write(dataStr);
+      resp = await req.close();
+      body = await resp.transform(UTF8.decoder).join();
+    } on HttpException catch (e) {
+      logger.warning('Error posting URL: $url', e);
+      return null;
+    }
+
+    var result = {};
+    try {
+      result = JSON.decode(body);
+      if (resp.statusCode == HttpStatus.OK) {
+        _newDevices.add(result);
+      }
+    } catch (e) {
+      logger.warning('Error decoding response: $body', e);
+      return null;
+    }
+    resetWebsocket();
+    return result;
+  }
+
   Future connectWebSocket() async {
     var headers = {
       'Cookie' : _cookies.map((c) => c.toString()).join('; ')
