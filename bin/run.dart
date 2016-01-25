@@ -17,7 +17,8 @@ Future main(List<String> args) async {
     TraccarReport.isType : (String path) => new TraccarReport(path),
     TraccarDevice.isType : (String path) => new TraccarDevice(path),
     AddDevice.isType : (String path) => new AddDevice(path),
-    EditDevice.isType : (String path) => new EditDevice(path)
+    EditDevice.isType : (String path) => new EditDevice(path),
+    RemoveDevice.isType : (String path) => new RemoveDevice(path)
   }, autoInitialize: false);
 
   link.init();

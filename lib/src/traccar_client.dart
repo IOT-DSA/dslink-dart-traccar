@@ -192,6 +192,34 @@ class TraccarClient {
     return (resp.statusCode == HttpStatus.OK);
   }
 
+  Future<bool> delete(String path, int id) async {
+    String body;
+    HttpClientRequest req;
+    HttpClientResponse resp;
+
+    var url = _rootUri.replace(path: path);
+    logger.finest('PUT request for: $url');
+    try {
+      req = await _client.deleteUrl(url);
+      req.headers.contentType = ContentType.JSON;
+      req.cookies.addAll(_cookies);
+      resp = await req.close();
+      body = await resp.transform(UTF8.decoder).join();
+    } on HttpException catch (e) {
+      logger.warning('Error Putting URL: $url', e);
+      return false;
+    }
+
+    if (resp.statusCode == HttpStatus.NO_CONTENT) {
+      await subscriptions[id].close();
+      subscriptions.remove(id);
+      _removeDevices.add(id);
+    }
+
+    return resp.statusCode == HttpStatus.NO_CONTENT;
+
+  }
+
   Future connectWebSocket() async {
     var headers = {
       'Cookie' : _cookies.map((c) => c.toString()).join('; ')

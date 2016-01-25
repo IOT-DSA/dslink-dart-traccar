@@ -56,7 +56,8 @@ class TraccarDevice extends TraccarChild {
       },
       'position' : TraccarPosition.definition(),
       TraccarReport.pathName : TraccarReport.definition(data['id']),
-      EditDevice.pathName : EditDevice.definition(data['name'], data['uniqueId'])
+      EditDevice.pathName : EditDevice.definition(data['name'], data['uniqueId']),
+      RemoveDevice.pathName : RemoveDevice.definition()
     };
   }
 
@@ -358,6 +359,51 @@ class EditDevice extends SimpleNode {
       provider.removeNode(parent.path);
     } else {
       ret['message'] = 'Failed up update information.';
+    }
+
+    return ret;
+  }
+}
+
+class RemoveDevice extends SimpleNode {
+  static const String isType = 'removeDeviceNode';
+  static const String pathName = 'Remove_Device';
+  static Map<String, dynamic> definition() => {
+    r'$is' : isType,
+    r'$name' : 'Remove Device',
+    r'$invokable' : 'write',
+    r'$params' : [],
+    r'$columns' : [
+      {
+        'name' : 'success',
+        'type' : 'bool',
+        'default' : false
+      },
+      {
+        'name' : 'message',
+        'type' : 'string',
+        'default': ''
+      }
+    ]
+  };
+
+  RemoveDevice(String path) : super(path);
+
+  @override
+  Future<Map<String, dynamic>> onInvoke(Map<String, dynamic> params) async {
+    var ret = { 'success' : false, 'message' : '' };
+
+    var client = (parent as TraccarDevice).client;
+    var id = (parent as TraccarDevice).id;
+    var path = '${TraccarDevice.url}/$id';
+    var res = await client.delete(path, id);
+
+    if (res) {
+      ret['success'] = true;
+      ret['message'] = 'Removed successfully.';
+      provider.removeNode(parent.path);
+    } else {
+      ret['message'] = 'Unable to remove device.';
     }
 
     return ret;
