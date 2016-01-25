@@ -132,6 +132,7 @@ class TraccarNode extends SimpleNode {
     for (var device in devices) {
       _addDevice(device);
     }
+    _client.onRemoveDevice.listen(_removeDevice);
     _client.onNewDevice.listen(_addDevice);
     await _client.connectWebSocket();
   }
@@ -142,13 +143,19 @@ class TraccarNode extends SimpleNode {
   }
 
   void _addDevice(Map<String, dynamic> device) {
-    if (deviceIds.contains(device['id'])) return;
+    if (deviceIds.contains(device['id'])) {
+      return;
+    }
     deviceIds.add(device['id']);
     var devicesNode = provider.getOrCreateNode('$path/devices');
     var devNodePath = devicesNode.path;
     var name = NodeNamer.createName(device['name']);
     provider.addNode('$devNodePath/$name', TraccarDevice.definition(device));
 
+  }
+
+  void _removeDevice(int id) {
+    deviceIds.remove(id);
   }
 }
 

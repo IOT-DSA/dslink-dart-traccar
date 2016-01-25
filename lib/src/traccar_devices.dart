@@ -55,7 +55,8 @@ class TraccarDevice extends TraccarChild {
         r'?value' : data['dataId']
       },
       'position' : TraccarPosition.definition(),
-      TraccarReport.pathName : TraccarReport.definition(data['id'])
+      TraccarReport.pathName : TraccarReport.definition(data['id']),
+      EditDevice.pathName : EditDevice.definition(data['name'], data['uniqueId'])
     };
   }
 
@@ -190,7 +191,13 @@ class TraccarPosition extends TraccarChild {
 
     if (data['latitude'] != null && data['longitude'] != null) {
       var loc = { 'lat': data['latitude'], 'lng': data['longitude']};
-      provider.updateValue('$path/location', loc);
+      var nd = provider.getNode('$path/location');
+      if (nd == null) {
+        nd = provider.getOrCreateNode('$path/location');
+        nd.configs[r'$type'] = 'map';
+        nd.configs['@geo'] = true;
+      }
+      nd.updateValue(loc);
     }
   }
 }
@@ -324,9 +331,35 @@ class EditDevice extends SimpleNode {
   };
   
   EditDevice(String path) : super(path);
-  
-  @override
-  Map<String, dynamic> onInvoke(Map<String, dynamic> params) {
 
+  @override
+  Future<Map<String, dynamic>> onInvoke(Map<String, dynamic> params) async {
+    var ret = { 'success' : false, 'message' : '' };
+    if (params['name'] == null || params['name'].isEmpty ||
+      params['identifier'] == null || params['identifier'].isEmpty) {
+      ret['message'] = 'Name and Identifier are required.';
+      return ret;
+    }
+
+    var client = (parent as TraccarDevice).client;
+    var id = (parent as TraccarDevice).id;
+    var path = '${TraccarDevice.url}/$id';
+    var data = {
+      'id' : id,
+      'name' : params['name'],
+      'uniqueId' : params['identifier'],
+      'status' : '',
+      'lastUpdate' : null
+    };
+    var res = await client.put(path, data);
+    if (res) {
+      ret['success'] = true;
+      ret['message'] = 'Successful!';
+      provider.removeNode(parent.path);
+    } else {
+      ret['message'] = 'Failed up update information.';
+    }
+
+    return ret;
   }
 }

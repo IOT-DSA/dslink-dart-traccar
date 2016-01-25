@@ -22,12 +22,14 @@ class TraccarClient {
   List<Cookie> _cookies;
   WebSocket _ws;
   StreamController<Map<String, dynamic>> _newDevices;
+  StreamController<int> _removeDevices;
   Set<int> _pendingDevices;
   Timer _resetSocket;
 
   bool isAuthorized = false;
   HashMap<int, StreamController<TraccarUpdate>> subscriptions;
   Stream<Map<String, dynamic>> get onNewDevice => _newDevices.stream;
+  Stream<int> get onRemoveDevice => _removeDevices.stream;
 
   factory TraccarClient(String server, String username, String password) =>
       _cache.putIfAbsent('$username@$server',
@@ -37,6 +39,7 @@ class TraccarClient {
     _rootUri = Uri.parse(server);
     _client = new HttpClient();
     _newDevices = new StreamController<Map<String, dynamic>>();
+    _removeDevices = new StreamController<int>();
     _pendingDevices = new Set<int>();
   }
 
@@ -150,6 +153,43 @@ class TraccarClient {
     }
     resetWebsocket();
     return result;
+  }
+
+  Future<bool> put(String path, Map data) async {
+    String body;
+    HttpClientRequest req;
+    HttpClientResponse resp;
+    String dataStr = JSON.encode(data);
+
+    var url = _rootUri.replace(path: path);
+    logger.finest('PUT request for: $url');
+    try {
+      req = await _client.putUrl(url);
+      req.headers.contentType = ContentType.JSON;
+      req.cookies.addAll(_cookies);
+      req.write(dataStr);
+      resp = await req.close();
+      body = await resp.transform(UTF8.decoder).join();
+    } on HttpException catch (e) {
+      logger.warning('Error Putting URL: $url', e);
+      return false;
+    }
+
+    var result = {};
+    try {
+      result = JSON.decode(body);
+      if (resp.statusCode == HttpStatus.OK) {
+        await subscriptions[result['id']].close();
+        subscriptions.remove(result['id']);
+        _removeDevices.add(result['id']);
+        _newDevices.add(result);
+      }
+    } catch (e) {
+      logger.warning('Error decoding response: $body', e);
+      return false;
+    }
+
+    return (resp.statusCode == HttpStatus.OK);
   }
 
   Future connectWebSocket() async {
