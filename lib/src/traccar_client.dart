@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:dslink/utils.dart' show logger;
 
 enum SubscriptionType { device, position }
+enum RequestType { get, post, put, delete }
 
 class TraccarClient {
   static const String _authUrl = 'api/session';
@@ -97,127 +98,121 @@ class TraccarClient {
   }
 
   Future<List<Map>> get(String path, {Map queryParameters}) async {
-    String body;
-    HttpClientRequest req;
-    HttpClientResponse resp;
-
-    var url = _rootUri.replace(path: path, queryParameters: queryParameters);
-    logger.finest('GET request for: $url');
+    ResponseData resp;
+    List<Map> result;
     try {
-      req = await _client.getUrl(url);
-      req.cookies.addAll(_cookies);
-      resp = await req.close();
-      body = await resp.transform(UTF8.decoder).join();
+      resp = await _sendRequest(RequestType.get, path, null, queryParameters);
+      result = JSON.decode(resp.data);
     } on HttpException catch (e) {
-      logger.warning('Error getting url: $url', e);
+      logger.warning('Error GETting URL: $path', e);
+      return [];
+    } catch (e) {
+      logger.warning('Error decoding response: ${resp.data}', e);
       return [];
     }
 
-    try {
-      return JSON.decode(body);
-    } catch (e) {
-      logger.warning('Error decoding response: $body', e);
-      return [];
-    }
+    return result;
   }
 
   Future<Map> post(String path, Map data) async {
-    String body;
-    HttpClientRequest req;
-    HttpClientResponse resp;
-    String dataStr = JSON.encode(data);
-
-    var url = _rootUri.replace(path: path);
-    logger.finest('POST request for: $url');
+    ResponseData resp;
+    Map result;
     try {
-      req = await _client.postUrl(url);
-      req.headers.contentType = ContentType.JSON;
-      req.cookies.addAll(_cookies);
-      req.write(dataStr);
-      resp = await req.close();
-      body = await resp.transform(UTF8.decoder).join();
+      resp = await _sendRequest(RequestType.post, path, data);
+      result = JSON.decode(resp.data);
     } on HttpException catch (e) {
-      logger.warning('Error posting URL: $url', e);
+      logger.warning('Error posting URL: $path', e);
+      return null;
+    } catch (e) {
+      logger.warning('Error decoding response: ${resp.data}', e);
       return null;
     }
 
-    var result = {};
-    try {
-      result = JSON.decode(body);
-      if (resp.statusCode == HttpStatus.OK) {
-        _newDevices.add(result);
-      }
-    } catch (e) {
-      logger.warning('Error decoding response: $body', e);
-      return null;
+    if (resp.statusCode == HttpStatus.OK) {
+      _newDevices.add(result);
     }
+
     resetWebsocket();
     return result;
   }
 
   Future<bool> put(String path, Map data) async {
-    String body;
-    HttpClientRequest req;
-    HttpClientResponse resp;
-    String dataStr = JSON.encode(data);
-
-    var url = _rootUri.replace(path: path);
-    logger.finest('PUT request for: $url');
+    ResponseData resp;
+    Map result;
     try {
-      req = await _client.putUrl(url);
-      req.headers.contentType = ContentType.JSON;
-      req.cookies.addAll(_cookies);
-      req.write(dataStr);
-      resp = await req.close();
-      body = await resp.transform(UTF8.decoder).join();
+      resp = await _sendRequest(RequestType.put, path, data);
+      result = JSON.decode(resp.data);
     } on HttpException catch (e) {
-      logger.warning('Error Putting URL: $url', e);
+      logger.warning('Error PUTting url: $path', e);
+      return false;
+    } catch (e) {
+      logger.warning('Error decoding response: ${resp.data}', e);
       return false;
     }
 
-    var result = {};
-    try {
-      result = JSON.decode(body);
-      if (resp.statusCode == HttpStatus.OK) {
-        await subscriptions[result['id']].close();
-        subscriptions.remove(result['id']);
-        _removeDevices.add(result['id']);
-        _newDevices.add(result);
-      }
-    } catch (e) {
-      logger.warning('Error decoding response: $body', e);
-      return false;
+    if (resp.statusCode == HttpStatus.OK) {
+      await subscriptions[result['id']].close();
+      subscriptions.remove(result['id']);
+      _removeDevices.add(result['id']);
+      _newDevices.add(result);
     }
 
     return (resp.statusCode == HttpStatus.OK);
   }
 
   Future<bool> delete(String path, int id) async {
-    String body;
-    HttpClientRequest req;
-    HttpClientResponse resp;
-
-    var url = _rootUri.replace(path: path);
-    logger.finest('PUT request for: $url');
+    ResponseData ret;
     try {
-      req = await _client.deleteUrl(url);
-      req.headers.contentType = ContentType.JSON;
-      req.cookies.addAll(_cookies);
-      resp = await req.close();
-      body = await resp.transform(UTF8.decoder).join();
+      ret = await _sendRequest(RequestType.delete, path);
     } on HttpException catch (e) {
-      logger.warning('Error Putting URL: $url', e);
+      logger.warning('Error Putting URL: $path', e);
       return false;
     }
 
-    if (resp.statusCode == HttpStatus.NO_CONTENT) {
+    if (ret.statusCode == HttpStatus.NO_CONTENT) {
       await subscriptions[id].close();
       subscriptions.remove(id);
       _removeDevices.add(id);
     }
 
-    return resp.statusCode == HttpStatus.NO_CONTENT;
+    return ret.statusCode == HttpStatus.NO_CONTENT;
+  }
 
+  Future<ResponseData> _sendRequest(RequestType type, String path, [Map data,
+      Map queryParameters]) async {
+
+    String body;
+    HttpClientRequest req;
+    HttpClientResponse resp;
+    String dataStr;
+    if (data != null) {
+      dataStr = JSON.encode(data);
+    }
+
+    var url = _rootUri.replace(path: path, queryParameters: queryParameters);
+
+    switch (type) {
+      case RequestType.get:
+        req = await _client.getUrl(url);
+        break;
+      case RequestType.post:
+        req = await _client.postUrl(url);
+        break;
+      case RequestType.put:
+        req = await _client.putUrl(url);
+        break;
+      case RequestType.delete:
+        req = await _client.deleteUrl(url);
+        break;
+    }
+    req.headers.contentType = ContentType.JSON;
+    req.cookies.addAll(_cookies);
+    if (dataStr != null) {
+      req.write(dataStr);
+    }
+    resp = await req.close();
+    body = await resp.transform(UTF8.decoder).join();
+    return new ResponseData(body, resp.statusCode);
   }
 
   Future connectWebSocket() async {
@@ -327,4 +322,10 @@ class TraccarUpdate {
   SubscriptionType type;
   Map<String, dynamic> data;
   TraccarUpdate(this.type, this.data);
+}
+
+class ResponseData {
+  String data;
+  int statusCode;
+  ResponseData(this.data, this.statusCode);
 }
